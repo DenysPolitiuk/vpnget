@@ -12,23 +12,13 @@ use vpnget::common::Options;
 use vpnget::ovpn;
 use vpnget::Servers;
 
-// Verbose option
+// TODO:
 //
 // Get servers
 // 1) make a request for best servers +
 // 2) optional country +
 // 3) add server group and server technology options
 //
-// Run openvpn
-// 1) optionally decrypt credential file +
-// 2) run openvpn command +
-// 3) delete decrypted credential file from #1
-// 4) force flag to force a specific server
-//
-// TODO:
-//  Optimize unzip to only unzip specified country
-//  Add option to pick random server from returned in request to avoid picking the same server
-//      even after re-running in  short period of time
 //  Look into better error handling ?
 //  Add logging ?
 fn main() {
@@ -78,10 +68,15 @@ fn main() {
                 .long("random")
                 .help("randomize picked server from returned server from request"),
         )
+        .arg(
+            Arg::with_name("execute")
+                .short("e")
+                .long("execute")
+                .help("execute generated openvpn command"),
+        )
         .arg(Arg::with_name("verbose").short("v").help("be verbose"))
         .get_matches();
 
-    let verbose = matches.is_present("verbose");
     let country = matches.value_of("country").unwrap_or("");
     let credential = matches
         .value_of("credential")
@@ -90,15 +85,17 @@ fn main() {
         } else {
             None
         });
+    let execute = matches.is_present("execute");
     let options = Options::new()
         .with_base_folder(OVPN_BASE_FOLDER)
-        .with_verbose(verbose)
+        .with_verbose(matches.is_present("verbose"))
         .with_udp_suffix(UDP_SUF)
-        .with_credential_file(credential);
-    let force = matches.value_of("force").or(None);
-    let random = matches.is_present("random");
+        .with_credential_file(credential)
+        .with_country(Country::new(country))
+        .with_random(matches.is_present("random"))
+        .with_forced(matches.value_of("force").or(None));
 
-    let v = verbose;
+    let v = options.verbose;
     ctrlc::set_handler(move || {
         common::vprint(v, "There is no escape...");
     })
@@ -114,35 +111,59 @@ fn main() {
             });
         }
 
-        s.spawn(|_| {
-            match Servers::new(
-                SERVER_URL,
-                vpnget::Options {
-                    country: Country::new(country),
-                    verbose,
-                },
-            )
-            .update_server_list()
-            {
-                Ok(s) => servers = Some(s),
-                Err(e) => println!("Error in update server list : {}", e),
-            };
-        });
+        if options.forced.is_none() {
+            s.spawn(|_| {
+                match Servers::new(
+                    SERVER_URL,
+                    vpnget::Options {
+                        country: Country::new(country),
+                        verbose: options.verbose,
+                    },
+                )
+                .update_server_list()
+                {
+                    Ok(s) => servers = Some(s),
+                    Err(e) => println!("Error in update server list : {}", e),
+                };
+            });
+        }
     })
     .unwrap();
-    let servers = servers.unwrap();
 
-    common::vprint(verbose, format!("{:?}", servers.get_hostnames()).as_str());
+    let mut hostnames = match servers {
+        Some(s) => s.get_hostnames(),
+        None => match options.forced {
+            None => panic!("No servers found and no force servers"),
+            Some(s) => vec![s.to_string()],
+        },
+    };
 
-    if let Some(f) = credential {
-        if let Err(e) = cmd::unlock_gpg(f) {
-            println!("Error from unlock gpg : {}", e);
+    common::vprint(options.verbose, format!("{:?}", hostnames).as_str());
+
+    if execute {
+        let mut delete_file_handler = None;
+        if let Some(f) = credential {
+            let result = cmd::unlock_gpg(f, &options);
+            match result {
+                Err(e) => println!("Error from unlock gpg : {}", e),
+                Ok(h) => delete_file_handler = h,
+            }
         }
+        if let Err(e) = cmd::run_openvpn_command(&mut hostnames, &options) {
+            println!("Error from cmd : {}", e);
+        }
+        if let Some(h) = delete_file_handler {
+            common::vprint(options.verbose, "Waiting for deleting credential file");
+            h.join().unwrap();
+            common::vprint(options.verbose, "File deleted");
+        }
+    } else {
+        let command = cmd::build_openvpn_command(&mut hostnames, &options);
+        match command {
+            Ok(c) => println!("{}", c),
+            Err(e) => println!("Error from build command : {}", e),
+        };
     }
 
-    if let Err(e) = cmd::run_openvpn_command(servers.get_hostnames(), &options) {
-        println!("Error from cmd : {}", e);
-    }
-
-    common::vprint(verbose, "Existing the program");
+    common::vprint(options.verbose, "Existing the program");
 }

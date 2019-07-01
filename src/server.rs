@@ -72,8 +72,8 @@ impl Servers {
         }
     }
 
-    pub fn get_hostnames(&self) -> Vec<&str> {
-        self.servers.iter().map(|s| s.hostname.as_ref()).collect()
+    pub fn get_hostnames(&self) -> Vec<String> {
+        self.servers.iter().map(|s| s.hostname.clone()).collect()
     }
 
     pub fn build_command(&self) -> Result<String, Box<Error>> {

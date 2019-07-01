@@ -23,7 +23,7 @@ pub fn handler_ovpn_zip(url: &str, opt: &Options) -> Result<(), Box<Error>> {
     if !Path::new(base_folder).exists() {
         common::vprint(
             opt.verbose,
-            format!("{} doesn't exist, creating a new one", &base_folder).as_str(),
+            format!("{} folder doesn't exist, creating a new one", &base_folder).as_str(),
         );
         fs::create_dir(&base_folder)?;
     }
@@ -37,6 +37,12 @@ pub fn handler_ovpn_zip(url: &str, opt: &Options) -> Result<(), Box<Error>> {
     for i in 0..zip.len() {
         let file = zip.by_index(i)?;
         let file_name = file.name();
+        if let Some(s) = opt.country.to_str() {
+            let matches: Vec<_> = file_name.matches(s).collect();
+            if matches.len() < 1 {
+                continue;
+            }
+        }
         let split_name: Vec<_> = file_name.split(path::MAIN_SEPARATOR).collect();
         let new_file_path = Path::new(&file_name).strip_prefix(split_name.get(0).unwrap())?;
         let new_file_fullpath = Path::new(base_folder).join(new_file_path);

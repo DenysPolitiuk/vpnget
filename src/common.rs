@@ -6,10 +6,13 @@ pub struct Options<'a> {
     pub udp_suffix: &'a str,
     pub use_udp: bool,
     pub credential_file: Option<&'a str>,
+    pub country: Country,
+    pub random: bool,
+    pub forced: Option<&'a str>,
 }
 
-impl Options<'static> {
-    pub fn new() -> Options<'static> {
+impl<'a> Options<'a> {
+    pub fn new() -> Options<'a> {
         Options {
             verbose: false,
             base_folder: "",
@@ -17,11 +20,12 @@ impl Options<'static> {
             udp_suffix: "",
             use_udp: true,
             credential_file: None,
+            country: Country::Default,
+            random: false,
+            forced: None,
         }
     }
-}
 
-impl<'a> Options<'a> {
     pub fn with_verbose(mut self, v: bool) -> Self {
         self.verbose = v;
         self
@@ -51,7 +55,24 @@ impl<'a> Options<'a> {
         self.credential_file = credential_file;
         self
     }
+
+    pub fn with_country(mut self, country: Country) -> Self {
+        self.country = country;
+        self
+    }
+
+    pub fn with_random(mut self, random: bool) -> Self {
+        self.random = random;
+        self
+    }
+
+    pub fn with_forced(mut self, forced: Option<&'a str>) -> Self {
+        self.forced = forced;
+        self
+    }
 }
+
+#[derive(Debug)]
 pub enum Country {
     Default,
     Canada,
