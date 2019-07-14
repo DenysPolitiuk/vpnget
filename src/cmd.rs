@@ -98,6 +98,8 @@ fn remove_file_extension(file: &str) -> String {
 pub fn unlock_gpg(file_name: &str, opt: &Options) -> Result<Option<JoinHandle<()>>, Box<Error>> {
     let command = format!("gpg {}", file_name);
 
+    execute_cmd(command)?;
+
     let mut delete_file_handler = None;
     if let Some(file) = opt.credential_file {
         let file = remove_file_extension(file);
@@ -106,8 +108,6 @@ pub fn unlock_gpg(file_name: &str, opt: &Options) -> Result<Option<JoinHandle<()
             fs::remove_file(file).unwrap();
         }));
     }
-
-    execute_cmd(command)?;
 
     Ok(delete_file_handler)
 }
