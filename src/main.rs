@@ -142,6 +142,9 @@ fn main() {
 
     if execute {
         let mut delete_file_handler = None;
+        if let Err(e) = cmd::pre_enter_sudo() {
+            println!("Error when trying to cache sudo access : {}", e);
+        }
         if let Some(f) = credential {
             let result = cmd::unlock_gpg(f, &options);
             match result {

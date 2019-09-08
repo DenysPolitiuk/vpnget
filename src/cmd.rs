@@ -13,6 +13,8 @@ use std::thread;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
+static DEFAULT_CREDENTIALS_DELETE_TIMER: u64 = 1;
+
 pub fn execute_cmd(cmd: String) -> Result<(), Box<Error>> {
     let cmd_split: Vec<_> = cmd.split(' ').collect();
     if cmd_split.len() < 1 || cmd_split[0] == "" {
@@ -95,6 +97,12 @@ fn remove_file_extension(file: &str) -> String {
     }
 }
 
+pub fn pre_enter_sudo() -> Result<(), Box<dyn Error>> {
+    let command = "sudo echo";
+    execute_cmd(command.to_string())?;
+    Ok(())
+}
+
 pub fn unlock_gpg(file_name: &str, opt: &Options) -> Result<Option<JoinHandle<()>>, Box<Error>> {
     let command = format!("gpg {}", file_name);
 
@@ -104,7 +112,7 @@ pub fn unlock_gpg(file_name: &str, opt: &Options) -> Result<Option<JoinHandle<()
     if let Some(file) = opt.credential_file {
         let file = remove_file_extension(file);
         delete_file_handler = Some(thread::spawn(move || {
-            thread::sleep(Duration::from_secs(5));
+            thread::sleep(Duration::from_secs(DEFAULT_CREDENTIALS_DELETE_TIMER));
             fs::remove_file(file).unwrap();
         }));
     }
