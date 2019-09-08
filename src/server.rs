@@ -39,7 +39,7 @@ impl Servers {
         }
     }
 
-    pub fn update_server_list(mut self) -> Result<Self, Box<Error>> {
+    pub fn update_server_list(mut self) -> Result<Self, Box<dyn Error>> {
         let mut new_url = self.base_url.clone();
         let country_id = self.options.get_id();
         common::vprint(self.options.verbose, "About to do server list update...");
@@ -76,7 +76,7 @@ impl Servers {
         self.servers.iter().map(|s| s.hostname.clone()).collect()
     }
 
-    pub fn build_command(&self) -> Result<String, Box<Error>> {
+    pub fn build_command(&self) -> Result<String, Box<dyn Error>> {
         let mut command_string = String::new();
         command_string.push_str("sudo openvpn --config ");
         match self.get_best_server() {

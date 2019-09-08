@@ -15,7 +15,7 @@ use std::time::Duration;
 
 static DEFAULT_CREDENTIALS_DELETE_TIMER: u64 = 1;
 
-pub fn execute_cmd(cmd: String) -> Result<(), Box<Error>> {
+pub fn execute_cmd(cmd: String) -> Result<(), Box<dyn Error>> {
     let cmd_split: Vec<_> = cmd.split(' ').collect();
     if cmd_split.len() < 1 || cmd_split[0] == "" {
         return Err("No command specified")?;
@@ -36,7 +36,10 @@ pub fn execute_cmd(cmd: String) -> Result<(), Box<Error>> {
     Ok(())
 }
 
-pub fn run_openvpn_command(hostnames: &mut Vec<String>, opt: &Options) -> Result<(), Box<Error>> {
+pub fn run_openvpn_command(
+    hostnames: &mut Vec<String>,
+    opt: &Options,
+) -> Result<(), Box<dyn Error>> {
     let command = build_openvpn_command(hostnames, opt)?;
     common::vprint(opt.verbose, command.as_str());
 
@@ -48,7 +51,7 @@ pub fn run_openvpn_command(hostnames: &mut Vec<String>, opt: &Options) -> Result
 pub fn build_openvpn_command(
     hostnames: &mut Vec<String>,
     opt: &Options,
-) -> Result<String, Box<Error>> {
+) -> Result<String, Box<dyn Error>> {
     if opt.random {
         hostnames.shuffle(&mut rand::thread_rng());
     }
@@ -103,7 +106,10 @@ pub fn pre_enter_sudo() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn unlock_gpg(file_name: &str, opt: &Options) -> Result<Option<JoinHandle<()>>, Box<Error>> {
+pub fn unlock_gpg(
+    file_name: &str,
+    opt: &Options,
+) -> Result<Option<JoinHandle<()>>, Box<dyn Error>> {
     let command = format!("gpg {}", file_name);
 
     execute_cmd(command)?;

@@ -16,7 +16,7 @@ use std::path::Path;
 use crate::common;
 use crate::common::Options;
 
-pub fn handler_ovpn_zip(url: &str, opt: &Options) -> Result<(), Box<Error>> {
+pub fn handler_ovpn_zip(url: &str, opt: &Options) -> Result<(), Box<dyn Error>> {
     let mut tmp_file = tempfile::tempfile()?;
 
     let base_folder = opt.base_folder;
