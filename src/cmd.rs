@@ -6,7 +6,6 @@ use crate::common;
 use crate::common::Options;
 
 use std::error::Error;
-use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::thread;
@@ -110,16 +109,20 @@ pub fn unlock_gpg(
     file_name: &str,
     opt: &Options,
 ) -> Result<Option<JoinHandle<()>>, Box<dyn Error>> {
-    let command = format!("gpg {}", file_name);
-
-    execute_cmd(command)?;
-
     let mut delete_file_handler = None;
     if let Some(file) = opt.credential_file {
         let file = remove_file_extension(file);
+        let command = format!("gpg --output {} --decrypt {}", file, file_name);
+
+        execute_cmd(command)?;
+
         delete_file_handler = Some(thread::spawn(move || {
             thread::sleep(Duration::from_secs(DEFAULT_CREDENTIALS_DELETE_TIMER));
-            fs::remove_file(file).unwrap();
+
+            let command = format!("shred -u {}", file);
+            if let Err(e) = execute_cmd(command) {
+                eprintln!("Error in shredding credentials file : {}", e);
+            }
         }));
     }
 
